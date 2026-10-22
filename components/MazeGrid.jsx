@@ -118,48 +118,62 @@ const MazeGrid = () => {
           preserveAspectRatio="xMidYMid meet"
         >
           <defs>
-            {/* Horizontal pipe gradient - shiny cylinder illusion */}
+            {/* Horizontal pipe gradient - top-to-bottom shiny cylinder */}
             <linearGradient id="pipeH" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor="#062a36" />
-              <stop offset="12%"  stopColor="#0a5f7a" />
-              <stop offset="32%"  stopColor="#1cb8d8" />
-              <stop offset="50%"  stopColor="#e8f8ff" />
-              <stop offset="62%"  stopColor="#9ce6f5" />
-              <stop offset="80%"  stopColor="#0f95b8" />
-              <stop offset="100%" stopColor="#04232e" />
+              <stop offset="0%"   stopColor="#041e2a" />
+              <stop offset="10%"  stopColor="#084d63" />
+              <stop offset="28%"  stopColor="#14a8c8" />
+              <stop offset="48%"  stopColor="#d6f4ff" />
+              <stop offset="60%"  stopColor="#7fd8ef" />
+              <stop offset="82%"  stopColor="#0c7ea0" />
+              <stop offset="100%" stopColor="#031821" />
             </linearGradient>
 
-            {/* Vertical pipe gradient */}
+            {/* Vertical pipe gradient - left-to-right shiny cylinder */}
             <linearGradient id="pipeV" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%"   stopColor="#062a36" />
-              <stop offset="12%"  stopColor="#0a5f7a" />
-              <stop offset="32%"  stopColor="#1cb8d8" />
-              <stop offset="50%"  stopColor="#e8f8ff" />
-              <stop offset="62%"  stopColor="#9ce6f5" />
-              <stop offset="80%"  stopColor="#0f95b8" />
-              <stop offset="100%" stopColor="#04232e" />
+              <stop offset="0%"   stopColor="#041e2a" />
+              <stop offset="10%"  stopColor="#084d63" />
+              <stop offset="28%"  stopColor="#14a8c8" />
+              <stop offset="48%"  stopColor="#d6f4ff" />
+              <stop offset="60%"  stopColor="#7fd8ef" />
+              <stop offset="82%"  stopColor="#0c7ea0" />
+              <stop offset="100%" stopColor="#031821" />
             </linearGradient>
 
-            {/* Circular flange/collar gradient */}
-            <radialGradient id="flangeRad" cx="40%" cy="35%" r="65%">
-              <stop offset="0%"   stopColor="#baeeff" />
-              <stop offset="30%"  stopColor="#1cb8d8" />
-              <stop offset="70%"  stopColor="#0d7a96" />
-              <stop offset="100%" stopColor="#052838" />
+            {/* Glowing sphere node gradient - bright blue orb */}
+            <radialGradient id="nodeOrb" cx="35%" cy="30%" r="65%">
+              <stop offset="0%"   stopColor="#ffffff" />
+              <stop offset="18%"  stopColor="#a8efff" />
+              <stop offset="45%"  stopColor="#22d3ee" />
+              <stop offset="75%"  stopColor="#0369a1" />
+              <stop offset="100%" stopColor="#012030" />
             </radialGradient>
 
-            {/* Pipe glow filter */}
-            <filter id="pipeGlow" x="-15%" y="-15%" width="130%" height="130%">
-              <feGaussianBlur stdDeviation="4" result="blur" />
+            {/* Outer glow ring for nodes */}
+            <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="40%"  stopColor="rgba(34,211,238,0)" />
+              <stop offset="100%" stopColor="rgba(34,211,238,0.45)" />
+            </radialGradient>
+
+            {/* Along-pipe edge highlight — thin bright line on top of pipe body */}
+            {/* (no cross-glow filter; glow achieved by a bright highlight rect) */}
+
+            {/* Soft outer glow for pipe segments only */}
+            <filter id="pipeEdgeGlow" x="-8%" y="-8%" width="116%" height="116%">
+              <feGaussianBlur stdDeviation="2.5" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
 
-            {/* Bolt pattern for flanges */}
-            <filter id="innerShadow">
-              <feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="#000" floodOpacity="0.7" />
+            {/* Node glow filter */}
+            <filter id="nodeGlowFilter" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
             </filter>
           </defs>
 
@@ -175,92 +189,132 @@ const MazeGrid = () => {
           <rect x="0" y="0" width={SVG_W} height={SVG_H} fill="rgba(0,10,18,0.42)" />
 
           {/* ===== PIPE SEGMENTS (on WALL cells) ===== */}
-          <g filter="url(#pipeGlow)">
-            {wallCells.map(({ r, c, cx, cy, hasTop, hasBottom, hasLeft, hasRight, connCount }, idx) => (
-              <g key={`wall-${r}-${c}`}>
+          {/* Pass 1: pipe bodies (no cross-glow filter — glow is only along pipe via highlight strips) */}
+          <g filter="url(#pipeEdgeGlow)">
+            {wallCells.map(({ r, c, cx, cy, hasTop, hasBottom, hasLeft, hasRight }) => (
+              <g key={`pipe-${r}-${c}`}>
 
-                {/* Downward arm */}
+                {/* ── Vertical arms (hasTop / hasBottom) use pipeH gradient (top→bottom shading) ── */}
                 {hasTop && (
                   <rect
-                    x={cx - PR} y={cy - HALF - 2}
-                    width={PR * 2} height={HALF + PR + 2}
+                    x={cx - PR} y={cy - HALF - 1}
+                    width={PR * 2} height={HALF + PR + 1}
                     fill="url(#pipeH)"
                   />
                 )}
-                {/* Upward arm */}
                 {hasBottom && (
                   <rect
                     x={cx - PR} y={cy - PR}
-                    width={PR * 2} height={HALF + PR + 2}
+                    width={PR * 2} height={HALF + PR + 1}
                     fill="url(#pipeH)"
                   />
                 )}
-                {/* Rightward arm */}
+
+                {/* ── Horizontal arms (hasLeft / hasRight) use pipeV gradient (left→right shading) ── */}
                 {hasLeft && (
                   <rect
-                    x={cx - HALF - 2} y={cy - PR}
-                    width={HALF + PR + 2} height={PR * 2}
+                    x={cx - HALF - 1} y={cy - PR}
+                    width={HALF + PR + 1} height={PR * 2}
                     fill="url(#pipeV)"
                   />
                 )}
-                {/* Leftward arm */}
                 {hasRight && (
                   <rect
                     x={cx - PR} y={cy - PR}
-                    width={HALF + PR + 2} height={PR * 2}
+                    width={HALF + PR + 1} height={PR * 2}
                     fill="url(#pipeV)"
                   />
                 )}
 
-                {/* Junction Hub / Flange */}
-                {connCount >= 3 ? (
-                  // Multi-way junction: big bolted collar
-                  <g>
-                    <circle cx={cx} cy={cy} r={PR + 9} fill="url(#flangeRad)" stroke="#67e8f9" strokeWidth="2.5" />
-                    {/* Bolt holes at 4 positions */}
-                    <circle cx={cx - PR - 4} cy={cy} r="3.5" fill="#cfffff" stroke="#083344" strokeWidth="1" />
-                    <circle cx={cx + PR + 4} cy={cy} r="3.5" fill="#cfffff" stroke="#083344" strokeWidth="1" />
-                    <circle cx={cx} cy={cy - PR - 4} r="3.5" fill="#cfffff" stroke="#083344" strokeWidth="1" />
-                    <circle cx={cx} cy={cy + PR + 4} r="3.5" fill="#cfffff" stroke="#083344" strokeWidth="1" />
-                    <circle cx={cx} cy={cy} r={PR - 5} fill="#0b4f64" stroke="#22d3ee" strokeWidth="1.5" />
-                    <circle cx={cx} cy={cy} r={4}    fill="#e0f9ff" />
-                  </g>
-                ) : connCount === 2 && hasLeft && hasRight ? (
-                  // Straight horizontal coupling band
-                  <g>
-                    <rect x={cx - PR} y={cy - PR} width={PR * 2} height={PR * 2} fill="url(#pipeV)" />
-                    <rect x={cx - 6} y={cy - PR - 6} width={12} height={PR * 2 + 12} rx="3" fill="url(#flangeRad)" stroke="#67e8f9" strokeWidth="1.5" />
-                    <circle cx={cx} cy={cy - PR - 4} r="2.5" fill="#cfffff" />
-                    <circle cx={cx} cy={cy + PR + 4} r="2.5" fill="#cfffff" />
-                  </g>
-                ) : connCount === 2 && hasTop && hasBottom ? (
-                  // Straight vertical coupling band
-                  <g>
-                    <rect x={cx - PR} y={cy - PR} width={PR * 2} height={PR * 2} fill="url(#pipeH)" />
-                    <rect x={cx - PR - 6} y={cy - 6} width={PR * 2 + 12} height={12} rx="3" fill="url(#flangeRad)" stroke="#67e8f9" strokeWidth="1.5" />
-                    <circle cx={cx - PR - 4} cy={cy} r="2.5" fill="#cfffff" />
-                    <circle cx={cx + PR + 4} cy={cy} r="2.5" fill="#cfffff" />
-                  </g>
-                ) : (
-                  // Elbow / dead-end: standard round collar
-                  <g>
-                    <circle cx={cx} cy={cy} r={PR + 7} fill="url(#flangeRad)" stroke="#67e8f9" strokeWidth="2" />
-                    {hasLeft || hasRight ? (
-                      <>
-                        <circle cx={cx} cy={cy - PR - 4} r="2.5" fill="#cfffff" />
-                        <circle cx={cx} cy={cy + PR + 4} r="2.5" fill="#cfffff" />
-                      </>
-                    ) : (
-                      <>
-                        <circle cx={cx - PR - 4} cy={cy} r="2.5" fill="#cfffff" />
-                        <circle cx={cx + PR + 4} cy={cy} r="2.5" fill="#cfffff" />
-                      </>
-                    )}
-                    <circle cx={cx} cy={cy} r="4" fill="#e0f9ff" />
-                  </g>
+                {/* ── Highlight strips along pipe length (creates the "along-pipe" glow, not cross-glow) ── */}
+                {/* Vertical highlight (top arm) */}
+                {hasTop && (
+                  <rect
+                    x={cx - 3} y={cy - HALF - 1}
+                    width={6} height={HALF + PR + 1}
+                    fill="rgba(200,245,255,0.28)"
+                    rx="3"
+                  />
+                )}
+                {/* Vertical highlight (bottom arm) */}
+                {hasBottom && (
+                  <rect
+                    x={cx - 3} y={cy - PR}
+                    width={6} height={HALF + PR + 1}
+                    fill="rgba(200,245,255,0.28)"
+                    rx="3"
+                  />
+                )}
+                {/* Horizontal highlight (left arm) */}
+                {hasLeft && (
+                  <rect
+                    x={cx - HALF - 1} y={cy - 3}
+                    width={HALF + PR + 1} height={6}
+                    fill="rgba(200,245,255,0.28)"
+                    rx="3"
+                  />
+                )}
+                {/* Horizontal highlight (right arm) */}
+                {hasRight && (
+                  <rect
+                    x={cx - PR} y={cy - 3}
+                    width={HALF + PR + 1} height={6}
+                    fill="rgba(200,245,255,0.28)"
+                    rx="3"
+                  />
                 )}
               </g>
             ))}
+          </g>
+
+          {/* Pass 2: connector nodes on top of pipes */}
+          <g filter="url(#nodeGlowFilter)">
+            {wallCells.map(({ r, c, cx, cy, hasTop, hasBottom, hasLeft, hasRight, connCount }) => {
+              // Straight-through mid-band (no node orb needed, just a small ring collar)
+              const isStraightH = connCount === 2 && hasLeft && hasRight;
+              const isStraightV = connCount === 2 && hasTop && hasBottom;
+
+              if (isStraightH || isStraightV) {
+                // Slim coupling collar — no dark navy fill, just a narrow metallic ring
+                return (
+                  <g key={`node-${r}-${c}`}>
+                    {isStraightH ? (
+                      // Horizontal pipe collar: thin vertical band across the pipe
+                      <>
+                        <rect x={cx - 5} y={cy - PR - 2} width={10} height={PR * 2 + 4} rx="3"
+                          fill="#1a7a96" stroke="#67e8f9" strokeWidth="1.2" opacity="0.85" />
+                        <rect x={cx - 2} y={cy - PR - 2} width={4} height={PR * 2 + 4} rx="2"
+                          fill="rgba(200,245,255,0.35)" />
+                      </>
+                    ) : (
+                      // Vertical pipe collar: thin horizontal band across the pipe
+                      <>
+                        <rect x={cx - PR - 2} y={cy - 5} width={PR * 2 + 4} height={10} rx="3"
+                          fill="#1a7a96" stroke="#67e8f9" strokeWidth="1.2" opacity="0.85" />
+                        <rect x={cx - PR - 2} y={cy - 2} width={PR * 2 + 4} height={4} rx="2"
+                          fill="rgba(200,245,255,0.35)" />
+                      </>
+                    )}
+                  </g>
+                );
+              }
+
+              // Elbow, T-junction, cross — render glowing blue sphere orb
+              const orbR = connCount >= 3 ? PR + 6 : PR + 4;
+              return (
+                <g key={`node-${r}-${c}`}>
+                  {/* Outer ambient glow ring */}
+                  <circle cx={cx} cy={cy} r={orbR + 8} fill="url(#nodeGlow)" />
+                  {/* Dark rim */}
+                  <circle cx={cx} cy={cy} r={orbR} fill="#062030" stroke="#22d3ee" strokeWidth="1.8" />
+                  {/* Orb body */}
+                  <circle cx={cx} cy={cy} r={orbR - 2} fill="url(#nodeOrb)" />
+                  {/* Specular highlight (small bright dot offset top-left) */}
+                  <circle cx={cx - orbR * 0.28} cy={cy - orbR * 0.28} r={orbR * 0.22}
+                    fill="rgba(255,255,255,0.55)" />
+                </g>
+              );
+            })}
           </g>
 
           {/* ===== INTERACTIVE ITEMS on PATH cells ===== */}
