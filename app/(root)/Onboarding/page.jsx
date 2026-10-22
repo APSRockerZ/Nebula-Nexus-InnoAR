@@ -20,8 +20,8 @@ const Onboarding = () => {
     return (
             <div className="flex flex-row items-center bg-black">
               <StarsCanvas/>
-                <div className="w-[80%] h-screen flex items-center justify-center ">
-                    <div className="h-[800px] w-[1100px]">
+                <div className="w-[80%] h-screen flex items-center justify-center p-4">
+                    <div className="h-[760px] w-[1160px] max-w-[94%] relative">
                        <MazeGrid />
                     </div>
                 </div>

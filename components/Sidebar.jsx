@@ -4,6 +4,7 @@ import axios from "axios";
 import { GameContext } from "@/Context/GameContext";
 import { MdExitToApp } from "react-icons/md";
 import Image from "next/image";
+import { DangerTriangle, O2Cylinder } from "@/components/SpaceshipIcons";
 const Sidebar = () => {
   const { lifelines, score, timeLeft, setIsGameOver, setShowBackButton } =
     useContext(GameContext);
@@ -54,77 +55,47 @@ const Sidebar = () => {
             </span>
           ))}
         </div>
-        <div className="relative top-20 -left-20 mb-4 flex text-2xl mr-1">
-          <Image
-            src="/Images/Mermaid.png"
-            alt="Clock"
-            width={200}
-            height={200}
-            className=" relative -top-6 left-10 mr-2 z-50"
-          ></Image>
-          <div className="text-xl flex flex-col space-y-2 relative top-7 -left-9 items-center justify-center p-2 w-full">
-            <span
-              className="relative flex items-center justify-center p-2 rounded-lg bg-gradient-to-br from-gray-800 to-gray-900 shadow-lg transition-transform transform hover:scale-105 text-cyan-300 text-2xl"
-              style={{
-              boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.3)",
-              border: "1px solid rgba(255, 255, 255, 0.2)",
-              width: "227px",
-              height: "60px"
-            }}
-            >Time Left - <span className="text-3xl ml-1">{formatTime(timeLeft)}</span></span>
-            <span
-              className="relative flex items-center justify-center p-2 rounded-lg bg-gradient-to-br from-gray-800 to-gray-900 shadow-lg transition-transform transform hover:scale-105 text-cyan-300 text-3xl"
-              style={{
-              boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.3)",
-              border: "1px solid rgba(255, 255, 255, 0.2)",
-              width: "227px",
-              height: "50px"
-            }}
-            >Score: {score}</span>
+        <div className="flex flex-col items-center mt-3 mb-4 w-full px-4 space-y-2.5">
+          <div className="w-[110px] h-[110px] flex items-center justify-center relative">
+            <div className="absolute inset-0 bg-cyan-500/20 rounded-2xl blur-md" />
+            <Image
+              src="/Images/astronaut.jpg"
+              alt="Astronaut"
+              width={110}
+              height={110}
+              style={{ mixBlendMode: 'screen' }}
+              className="rounded-xl drop-shadow-[0_0_15px_rgba(56,189,248,0.85)] relative z-10"
+            />
           </div>
-         
+          <div className="text-xl flex flex-col space-y-2 items-center justify-center w-full">
+            <span
+              className="relative flex items-center justify-center p-2 rounded-lg bg-gradient-to-br from-gray-800 to-gray-900 shadow-lg transition-transform transform hover:scale-105 text-cyan-300 text-lg font-mono tracking-wider w-[220px] h-[48px]"
+              style={{
+                boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.4)",
+                border: "1px solid rgba(56, 189, 248, 0.3)",
+              }}
+            >
+              Time: <span className="text-2xl ml-2 text-white font-bold">{formatTime(timeLeft)}</span>
+            </span>
+            <span
+              className="relative flex items-center justify-center p-2 rounded-lg bg-gradient-to-br from-gray-800 to-gray-900 shadow-lg transition-transform transform hover:scale-105 text-cyan-300 text-xl font-mono font-bold w-[220px] h-[46px]"
+              style={{
+                boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.4)",
+                border: "1px solid rgba(56, 189, 248, 0.3)",
+              }}
+            >
+              Score: <span className="text-white ml-2">{score}</span>
+            </span>
+          </div>
         </div>
-        <div >
-            
-          </div>
       </div>
-
-      {/* <div className="mt-2 flex-1 w-[90%] self-center">
-  <h3 className="text-2xl mb-4 font-semibold text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500">
-    Leaderboard
-  </h3>
-  <ul className="space-y-4">
-    {leaderboard.slice(0, 3).map((player, index) => (
-      <li
-        key={player.id}
-        className="relative p-2 rounded-lg bg-gradient-to-br from-gray-800 to-gray-900 shadow-lg transition-transform transform hover:scale-105"
-        style={{
-          boxShadow: "0px 5px 15px rgba(0, 0, 0, 0.3)",
-          border: `1px solid rgba(255, 255, 255, 0.2)`,
-        }}
-      >
-        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500 via-purple-600 to-pink-500 opacity-20 blur-md -z-10"></div>
-
-        <div className="flex flex-col items-center text-white font-bold space-y-1">
-          <div className="flex items-center text-xl font-bold bg-gradient-to-r from-blue-400 to-pink-400 text-transparent bg-clip-text">
-            <span className="mr-2">#{index + 1}</span>
-            <span>{player.name.split(" ")[0]}</span>
-          </div>
-          <div className="text-sm font-semibold">
-            {player.points} pts &bull; {player.timeTaken} mins
-          </div>
-        </div>
-      </li>
-    ))}
-  </ul>
-</div> */}
 
       <div className="mb-8 -m-1 space-y-3 w-[90%] self-center">
         {[
-          { image: easyQuestionImage, label: "Easy", points: "+10" },
-          { image: mediumQuestionImage, label: "Medium", points: "+20" },
-          { image: hardQuestionImage, label: "Hard", points: "+30" },
-          { image: goalImage, label: "Goal", points: "+90" },
+          { icon: <DangerTriangle color="green" size={34} />, label: "Easy", points: "+10" },
+          { icon: <DangerTriangle color="yellow" size={34} />, label: "Medium", points: "+20" },
+          { icon: <DangerTriangle color="red" size={34} />, label: "Hard", points: "+30" },
+          { icon: <O2Cylinder size={22} animated={false} />, label: "Goal", points: "+90" },
         ].map((category, index) => (
           <div
             key={index}
@@ -135,13 +106,9 @@ const Sidebar = () => {
             }}
           >
             <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-950 opacity-20 blur-md -z-10"></div>
-            <Image
-              src={category.image}
-              alt={`${category.label} question`}
-              width={40}
-              height={40}
-              className="rounded-md"
-            />
+            <div className="w-10 h-10 flex items-center justify-center">
+              {category.icon}
+            </div>
             <span className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-pink-400">
               {category.label}
             </span>
