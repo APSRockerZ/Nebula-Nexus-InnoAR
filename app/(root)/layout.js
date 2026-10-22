@@ -21,13 +21,6 @@ export default async function RootLayout({ children }) {
       <GameProvider>
       <html lang="en">
         <body className={`${inter.className} bg-[#030014] overflow-y-hidden overflow-x-hidden`}>
-        <video
-        autoPlay
-        muted
-        loop
-        className="absolute top-0 left-0 w-full h-full object-cover z-0"
-    ><source src = "/Game_Page.mp4" type="video/mp4" />
-    </video>
           { children }
         </body>
       </html>

@@ -66,10 +66,13 @@ const MazeGrid = () => {
     );
   };
 
-  // Pre-compute pipe connectivity for each WALL cell (cell === 1)
-  const wallCells = useMemo(() => {
-    if (!mazeLayout?.length) return [];
-    const result = [];
+  // Pre-compute pipe connectivity for each WALL cell (cell === 1) & collar placements
+  const { wallCells, pipeCollars } = useMemo(() => {
+    if (!mazeLayout?.length) return { wallCells: [], pipeCollars: [] };
+
+    const grid = Array.from({ length: numRows }, () => Array(numCols).fill(null));
+    const cells = [];
+
     for (let r = 0; r < numRows; r++) {
       for (let c = 0; c < numCols; c++) {
         if (mazeLayout[r][c] !== 1) continue;
@@ -80,10 +83,88 @@ const MazeGrid = () => {
         const hasLeft   = c > 0 && mazeLayout[r][c - 1] === 1;
         const hasRight  = c < numCols - 1 && mazeLayout[r][c + 1] === 1;
         const connCount = (hasTop ? 1 : 0) + (hasBottom ? 1 : 0) + (hasLeft ? 1 : 0) + (hasRight ? 1 : 0);
-        result.push({ r, c, cx, cy, hasTop, hasBottom, hasLeft, hasRight, connCount });
+        const isStraightH = connCount === 2 && hasLeft && hasRight;
+        const isStraightV = connCount === 2 && hasTop && hasBottom;
+        const isNode = !isStraightH && !isStraightV;
+
+        const cellData = { r, c, cx, cy, hasTop, hasBottom, hasLeft, hasRight, connCount, isStraightH, isStraightV, isNode };
+        grid[r][c] = cellData;
+        cells.push(cellData);
       }
     }
-    return result;
+
+    // Identify periodic sci-fi collar positions along straight pipe runs (spaced out, never touching orbs)
+    const collars = [];
+
+    // Horizontal straight runs
+    for (let r = 0; r < numRows; r++) {
+      let run = [];
+      for (let c = 0; c < numCols; c++) {
+        if (grid[r][c]?.isStraightH) {
+          run.push(grid[r][c]);
+        } else {
+          if (run.length >= 3) {
+            if (run.length === 3 || run.length === 4) {
+              collars.push({ ...run[Math.floor(run.length / 2)], orientation: 'H' });
+            } else {
+              for (let i = 1; i < run.length - 1; i++) {
+                if (i % 3 === 1) {
+                  collars.push({ ...run[i], orientation: 'H' });
+                }
+              }
+            }
+          }
+          run = [];
+        }
+      }
+      if (run.length >= 3) {
+        if (run.length === 3 || run.length === 4) {
+          collars.push({ ...run[Math.floor(run.length / 2)], orientation: 'H' });
+        } else {
+          for (let i = 1; i < run.length - 1; i++) {
+            if (i % 3 === 1) {
+              collars.push({ ...run[i], orientation: 'H' });
+            }
+          }
+        }
+      }
+    }
+
+    // Vertical straight runs
+    for (let c = 0; c < numCols; c++) {
+      let run = [];
+      for (let r = 0; r < numRows; r++) {
+        if (grid[r][c]?.isStraightV) {
+          run.push(grid[r][c]);
+        } else {
+          if (run.length >= 3) {
+            if (run.length === 3 || run.length === 4) {
+              collars.push({ ...run[Math.floor(run.length / 2)], orientation: 'V' });
+            } else {
+              for (let i = 1; i < run.length - 1; i++) {
+                if (i % 3 === 1) {
+                  collars.push({ ...run[i], orientation: 'V' });
+                }
+              }
+            }
+          }
+          run = [];
+        }
+      }
+      if (run.length >= 3) {
+        if (run.length === 3 || run.length === 4) {
+          collars.push({ ...run[Math.floor(run.length / 2)], orientation: 'V' });
+        } else {
+          for (let i = 1; i < run.length - 1; i++) {
+            if (i % 3 === 1) {
+              collars.push({ ...run[i], orientation: 'V' });
+            }
+          }
+        }
+      }
+    }
+
+    return { wallCells: cells, pipeCollars: collars };
   }, [mazeLayout, numRows, numCols]);
 
   // Pre-compute path cells for rendering interactive items & the astronaut
@@ -105,7 +186,7 @@ const MazeGrid = () => {
 
   return (
     <div
-      className="relative w-full h-full select-none outline-none cursor-pointer rounded-2xl overflow-hidden border-[4px] border-[#1e3a4a] shadow-[0_0_50px_rgba(0,0,0,0.95)] bg-[#040d14]"
+      className="relative w-full h-full select-none outline-none cursor-pointer overflow-hidden bg-transparent"
       style={{ minHeight: '100%' }}
       tabIndex="0"
       ref={mazeRef}
@@ -115,29 +196,51 @@ const MazeGrid = () => {
         <svg
           viewBox={`0 0 ${SVG_W} ${SVG_H}`}
           className="absolute inset-0 z-[2] w-full h-full"
-          preserveAspectRatio="xMidYMid meet"
+          preserveAspectRatio="none"
         >
           <defs>
-            {/* Horizontal pipe gradient - top-to-bottom shiny cylinder */}
+            {/* Horizontal pipe gradient: across Y (top-to-bottom) so glow runs along length (X) */}
             <linearGradient id="pipeH" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor="#041e2a" />
-              <stop offset="10%"  stopColor="#084d63" />
-              <stop offset="28%"  stopColor="#14a8c8" />
-              <stop offset="48%"  stopColor="#d6f4ff" />
-              <stop offset="60%"  stopColor="#7fd8ef" />
-              <stop offset="82%"  stopColor="#0c7ea0" />
-              <stop offset="100%" stopColor="#031821" />
+              <stop offset="0%"   stopColor="#224d5e" />
+              <stop offset="6%"   stopColor="#2a667a" />
+              <stop offset="16%"  stopColor="#2b8497" />
+              <stop offset="28%"  stopColor="#32a9ba" />
+              <stop offset="38%"  stopColor="#4ed7dc" />
+              <stop offset="46%"  stopColor="#7cf7f9" />
+              <stop offset="50%"  stopColor="#ffffff" />
+              <stop offset="54%"  stopColor="#7cf7f9" />
+              <stop offset="62%"  stopColor="#4ed7dc" />
+              <stop offset="72%"  stopColor="#32a9ba" />
+              <stop offset="84%"  stopColor="#2b8497" />
+              <stop offset="94%"  stopColor="#2a667a" />
+              <stop offset="100%" stopColor="#224d5e" />
             </linearGradient>
 
-            {/* Vertical pipe gradient - left-to-right shiny cylinder */}
+            {/* Vertical pipe gradient: across X (left-to-right) so glow runs along length (Y) */}
             <linearGradient id="pipeV" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%"   stopColor="#041e2a" />
-              <stop offset="10%"  stopColor="#084d63" />
-              <stop offset="28%"  stopColor="#14a8c8" />
-              <stop offset="48%"  stopColor="#d6f4ff" />
-              <stop offset="60%"  stopColor="#7fd8ef" />
-              <stop offset="82%"  stopColor="#0c7ea0" />
-              <stop offset="100%" stopColor="#031821" />
+              <stop offset="0%"   stopColor="#224d5e" />
+              <stop offset="6%"   stopColor="#2a667a" />
+              <stop offset="16%"  stopColor="#2b8497" />
+              <stop offset="28%"  stopColor="#32a9ba" />
+              <stop offset="38%"  stopColor="#4ed7dc" />
+              <stop offset="46%"  stopColor="#7cf7f9" />
+              <stop offset="50%"  stopColor="#ffffff" />
+              <stop offset="54%"  stopColor="#7cf7f9" />
+              <stop offset="62%"  stopColor="#4ed7dc" />
+              <stop offset="72%"  stopColor="#32a9ba" />
+              <stop offset="84%"  stopColor="#2b8497" />
+              <stop offset="94%"  stopColor="#2a667a" />
+              <stop offset="100%" stopColor="#224d5e" />
+            </linearGradient>
+
+            {/* Dedicated O2 Cylinder gradient */}
+            <linearGradient id="o2CylinderGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stopColor="#042738" />
+              <stop offset="15%"  stopColor="#08546b" />
+              <stop offset="45%"  stopColor="#d6f4ff" />
+              <stop offset="55%"  stopColor="#7fd8ef" />
+              <stop offset="85%"  stopColor="#0c7ea0" />
+              <stop offset="100%" stopColor="#031f2c" />
             </linearGradient>
 
             {/* Glowing sphere node gradient - bright blue orb */}
@@ -155,20 +258,17 @@ const MazeGrid = () => {
               <stop offset="100%" stopColor="rgba(34,211,238,0.45)" />
             </radialGradient>
 
-            {/* Along-pipe edge highlight — thin bright line on top of pipe body */}
-            {/* (no cross-glow filter; glow achieved by a bright highlight rect) */}
-
-            {/* Soft outer glow for pipe segments only */}
-            <filter id="pipeEdgeGlow" x="-8%" y="-8%" width="116%" height="116%">
-              <feGaussianBlur stdDeviation="2.5" result="blur" />
+            {/* Soft outer glow for pipe segments with sRGB interpolation */}
+            <filter id="pipeEdgeGlow" x="-8%" y="-8%" width="116%" height="116%" colorInterpolationFilters="sRGB">
+              <feGaussianBlur stdDeviation="3" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
 
-            {/* Node glow filter */}
-            <filter id="nodeGlowFilter" x="-40%" y="-40%" width="180%" height="180%">
+            {/* Node glow filter with sRGB interpolation */}
+            <filter id="nodeGlowFilter" x="-40%" y="-40%" width="180%" height="180%" colorInterpolationFilters="sRGB">
               <feGaussianBlur stdDeviation="5" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
@@ -177,144 +277,283 @@ const MazeGrid = () => {
             </filter>
           </defs>
 
-          {/* ===== BACKGROUND: Spaceship image ===== */}
-          <image
-            href="/Images/spaceship_bg.jpg"
-            x="0" y="0"
-            width={SVG_W}
-            height={SVG_H}
-            preserveAspectRatio="none"
-          />
-          {/* Dark semi-transparent tint to make pipes pop */}
-          <rect x="0" y="0" width={SVG_W} height={SVG_H} fill="rgba(0,10,18,0.42)" />
+          {/* Subtle dark tint so neon pipes pop cleanly against the video */}
+          <rect x="0" y="0" width={SVG_W} height={SVG_H} fill="rgba(0,5,12,0.2)" />
 
-          {/* ===== PIPE SEGMENTS (on WALL cells) ===== */}
-          {/* Pass 1: pipe bodies (no cross-glow filter — glow is only along pipe via highlight strips) */}
+          {/* ===== PIPE SEGMENTS (Pass 1: Streamlined bodies & length-wise glowing core) ===== */}
+          {/* ===== PIPE SEGMENTS (Pass 1: Streamlined bodies & length-wise glowing core) ===== */}
           <g filter="url(#pipeEdgeGlow)">
-            {wallCells.map(({ r, c, cx, cy, hasTop, hasBottom, hasLeft, hasRight }) => (
+            {wallCells.map(({ r, c, cx, cy, hasTop, hasBottom, hasLeft, hasRight, isStraightH, isStraightV }) => (
               <g key={`pipe-${r}-${c}`}>
-
-                {/* ── Vertical arms (hasTop / hasBottom) use pipeH gradient (top→bottom shading) ── */}
-                {hasTop && (
+                {/* ── Straight horizontal pipe: 1 seamless continuous body across full cell ── */}
+                {isStraightH && (
                   <rect
-                    x={cx - PR} y={cy - HALF - 1}
-                    width={PR * 2} height={HALF + PR + 1}
+                    x={cx - HALF - 1}
+                    y={cy - PR}
+                    width={CELL + 2}
+                    height={PR * 2}
                     fill="url(#pipeH)"
-                  />
-                )}
-                {hasBottom && (
-                  <rect
-                    x={cx - PR} y={cy - PR}
-                    width={PR * 2} height={HALF + PR + 1}
-                    fill="url(#pipeH)"
+                    stroke="#163947"
+                    strokeWidth="1.2"
                   />
                 )}
 
-                {/* ── Horizontal arms (hasLeft / hasRight) use pipeV gradient (left→right shading) ── */}
-                {hasLeft && (
+                {/* ── Straight vertical pipe: 1 seamless continuous body across full cell ── */}
+                {isStraightV && (
                   <rect
-                    x={cx - HALF - 1} y={cy - PR}
-                    width={HALF + PR + 1} height={PR * 2}
+                    x={cx - PR}
+                    y={cy - HALF - 1}
+                    width={PR * 2}
+                    height={CELL + 2}
                     fill="url(#pipeV)"
-                  />
-                )}
-                {hasRight && (
-                  <rect
-                    x={cx - PR} y={cy - PR}
-                    width={HALF + PR + 1} height={PR * 2}
-                    fill="url(#pipeV)"
+                    stroke="#163947"
+                    strokeWidth="1.2"
                   />
                 )}
 
-                {/* ── Highlight strips along pipe length (creates the "along-pipe" glow, not cross-glow) ── */}
-                {/* Vertical highlight (top arm) */}
-                {hasTop && (
-                  <rect
-                    x={cx - 3} y={cy - HALF - 1}
-                    width={6} height={HALF + PR + 1}
-                    fill="rgba(200,245,255,0.28)"
-                    rx="3"
-                  />
+                {/* ── Non-straight cells (elbows, T-junctions, dead ends): connected arms ── */}
+                {!isStraightH && !isStraightV && (
+                  <>
+                    {/* Horizontal arms use pipeH (y-shading so highlight runs along length) */}
+                    {hasLeft && (
+                      <rect
+                        x={cx - HALF - 1}
+                        y={cy - PR}
+                        width={HALF + PR + 1}
+                        height={PR * 2}
+                        fill="url(#pipeH)"
+                        stroke="#163947"
+                        strokeWidth="1.2"
+                      />
+                    )}
+                    {hasRight && (
+                      <rect
+                        x={cx - PR}
+                        y={cy - PR}
+                        width={HALF + PR + 1}
+                        height={PR * 2}
+                        fill="url(#pipeH)"
+                        stroke="#163947"
+                        strokeWidth="1.2"
+                      />
+                    )}
+
+                    {/* Vertical arms use pipeV (x-shading so highlight runs along length) */}
+                    {hasTop && (
+                      <rect
+                        x={cx - PR}
+                        y={cy - HALF - 1}
+                        width={PR * 2}
+                        height={HALF + PR + 1}
+                        fill="url(#pipeV)"
+                        stroke="#163947"
+                        strokeWidth="1.2"
+                      />
+                    )}
+                    {hasBottom && (
+                      <rect
+                        x={cx - PR}
+                        y={cy - PR}
+                        width={PR * 2}
+                        height={HALF + PR + 1}
+                        fill="url(#pipeV)"
+                        stroke="#163947"
+                        strokeWidth="1.2"
+                      />
+                    )}
+                  </>
                 )}
-                {/* Vertical highlight (bottom arm) */}
-                {hasBottom && (
-                  <rect
-                    x={cx - 3} y={cy - PR}
-                    width={6} height={HALF + PR + 1}
-                    fill="rgba(200,245,255,0.28)"
-                    rx="3"
-                  />
+
+                {/* ── Continuous laser/plasma beam running along length (zero break seams) ── */}
+                {isStraightH && (
+                  <>
+                    <line
+                      x1={cx - HALF - 1} y1={cy}
+                      x2={cx + HALF + 1} y2={cy}
+                      stroke="#67e8f9" strokeWidth="8" strokeOpacity="0.5"
+                    />
+                    <line
+                      x1={cx - HALF - 1} y1={cy}
+                      x2={cx + HALF + 1} y2={cy}
+                      stroke="#ffffff" strokeWidth="2.5" strokeOpacity="0.9"
+                    />
+                  </>
                 )}
-                {/* Horizontal highlight (left arm) */}
-                {hasLeft && (
-                  <rect
-                    x={cx - HALF - 1} y={cy - 3}
-                    width={HALF + PR + 1} height={6}
-                    fill="rgba(200,245,255,0.28)"
-                    rx="3"
-                  />
+                {isStraightV && (
+                  <>
+                    <line
+                      x1={cx} y1={cy - HALF - 1}
+                      x2={cx} y2={cy + HALF + 1}
+                      stroke="#67e8f9" strokeWidth="8" strokeOpacity="0.5"
+                    />
+                    <line
+                      x1={cx} y1={cy - HALF - 1}
+                      x2={cx} y2={cy + HALF + 1}
+                      stroke="#ffffff" strokeWidth="2.5" strokeOpacity="0.9"
+                    />
+                  </>
                 )}
-                {/* Horizontal highlight (right arm) */}
-                {hasRight && (
-                  <rect
-                    x={cx - PR} y={cy - 3}
-                    width={HALF + PR + 1} height={6}
-                    fill="rgba(200,245,255,0.28)"
-                    rx="3"
-                  />
+                {!isStraightH && !isStraightV && (
+                  <>
+                    {hasLeft && (
+                      <>
+                        <line x1={cx - HALF - 1} y1={cy} x2={cx} y2={cy} stroke="#67e8f9" strokeWidth="8" strokeOpacity="0.5" />
+                        <line x1={cx - HALF - 1} y1={cy} x2={cx} y2={cy} stroke="#ffffff" strokeWidth="2.5" strokeOpacity="0.9" />
+                      </>
+                    )}
+                    {hasRight && (
+                      <>
+                        <line x1={cx} y1={cy} x2={cx + HALF + 1} y2={cy} stroke="#67e8f9" strokeWidth="8" strokeOpacity="0.5" />
+                        <line x1={cx} y1={cy} x2={cx + HALF + 1} y2={cy} stroke="#ffffff" strokeWidth="2.5" strokeOpacity="0.9" />
+                      </>
+                    )}
+                    {hasTop && (
+                      <>
+                        <line x1={cx} y1={cy - HALF - 1} x2={cx} y2={cy} stroke="#67e8f9" strokeWidth="8" strokeOpacity="0.5" />
+                        <line x1={cx} y1={cy - HALF - 1} x2={cx} y2={cy} stroke="#ffffff" strokeWidth="2.5" strokeOpacity="0.9" />
+                      </>
+                    )}
+                    {hasBottom && (
+                      <>
+                        <line x1={cx} y1={cy} x2={cx} y2={cy + HALF + 1} stroke="#67e8f9" strokeWidth="8" strokeOpacity="0.5" />
+                        <line x1={cx} y1={cy} x2={cx} y2={cy + HALF + 1} stroke="#ffffff" strokeWidth="2.5" strokeOpacity="0.9" />
+                      </>
+                    )}
+                  </>
                 )}
               </g>
             ))}
           </g>
 
-          {/* Pass 2: connector nodes on top of pipes */}
-          <g filter="url(#nodeGlowFilter)">
-            {wallCells.map(({ r, c, cx, cy, hasTop, hasBottom, hasLeft, hasRight, connCount }) => {
-              // Straight-through mid-band (no node orb needed, just a small ring collar)
-              const isStraightH = connCount === 2 && hasLeft && hasRight;
-              const isStraightV = connCount === 2 && hasTop && hasBottom;
-
-              if (isStraightH || isStraightV) {
-                // Slim coupling collar — no dark navy fill, just a narrow metallic ring
+          {/* ===== Pass 2: Sci-Fi Mounting Brackets / Collars (matching reference picture 2) ===== */}
+          <g>
+            {pipeCollars.map(({ r, c, cx, cy, orientation }) => {
+              if (orientation === 'H') {
                 return (
-                  <g key={`node-${r}-${c}`}>
-                    {isStraightH ? (
-                      // Horizontal pipe collar: thin vertical band across the pipe
-                      <>
-                        <rect x={cx - 5} y={cy - PR - 2} width={10} height={PR * 2 + 4} rx="3"
-                          fill="#1a7a96" stroke="#67e8f9" strokeWidth="1.2" opacity="0.85" />
-                        <rect x={cx - 2} y={cy - PR - 2} width={4} height={PR * 2 + 4} rx="2"
-                          fill="rgba(200,245,255,0.35)" />
-                      </>
-                    ) : (
-                      // Vertical pipe collar: thin horizontal band across the pipe
-                      <>
-                        <rect x={cx - PR - 2} y={cy - 5} width={PR * 2 + 4} height={10} rx="3"
-                          fill="#1a7a96" stroke="#67e8f9" strokeWidth="1.2" opacity="0.85" />
-                        <rect x={cx - PR - 2} y={cy - 2} width={PR * 2 + 4} height={4} rx="2"
-                          fill="rgba(200,245,255,0.35)" />
-                      </>
-                    )}
+                  <g key={`collar-${r}-${c}`}>
+                    {/* Shadow behind collar */}
+                    <rect
+                      x={cx - 9} y={cy - PR - 6}
+                      width={18} height={PR * 2 + 12}
+                      rx="3"
+                      fill="rgba(0,0,0,0.65)"
+                    />
+                    {/* Main bracket body */}
+                    <rect
+                      x={cx - 8} y={cy - PR - 5}
+                      width={16} height={PR * 2 + 10}
+                      rx="2"
+                      fill="#1b4b58"
+                      stroke="#6d97a1"
+                      strokeWidth="1.2"
+                    />
+                    {/* Top mounting lug & bolt */}
+                    <rect x={cx - 6.5} y={cy - PR - 5} width={13} height={4} rx="1" fill="#213c47" />
+                    <circle cx={cx} cy={cy - PR - 3} r={1.2} fill="#67e8f9" />
+                    {/* Bottom mounting lug & bolt */}
+                    <rect x={cx - 6.5} y={cy + PR + 1} width={13} height={4} rx="1" fill="#213c47" />
+                    <circle cx={cx} cy={cy + PR + 3} r={1.2} fill="#67e8f9" />
+                    {/* Inset tech panel frame */}
+                    <rect
+                      x={cx - 5.5} y={cy - 19}
+                      width={11} height={38}
+                      rx="1.5"
+                      fill="#0b2430"
+                      stroke="#22d3ee"
+                      strokeWidth="0.8"
+                    />
+                    {/* Stacked indicator LED segments inside the bracket (like reference picture 2) */}
+                    {[-13.5, -4.5, 4.5, 13.5].map((offsetY, idx) => (
+                      <rect
+                        key={idx}
+                        x={cx - 4}
+                        y={cy + offsetY - 2}
+                        width={8}
+                        height={4}
+                        rx="0.8"
+                        fill="#68cbd0"
+                        opacity="0.95"
+                      />
+                    ))}
+                  </g>
+                );
+              } else {
+                return (
+                  <g key={`collar-${r}-${c}`}>
+                    {/* Shadow behind collar */}
+                    <rect
+                      x={cx - PR - 6} y={cy - 9}
+                      width={PR * 2 + 12} height={18}
+                      rx="3"
+                      fill="rgba(0,0,0,0.65)"
+                    />
+                    {/* Main bracket body */}
+                    <rect
+                      x={cx - PR - 5} y={cy - 8}
+                      width={PR * 2 + 10} height={16}
+                      rx="2"
+                      fill="#1b4b58"
+                      stroke="#6d97a1"
+                      strokeWidth="1.2"
+                    />
+                    {/* Left mounting lug & bolt */}
+                    <rect x={cx - PR - 5} y={cy - 6.5} width={4} height={13} rx="1" fill="#213c47" />
+                    <circle cx={cx - PR - 3} cy={cy} r={1.2} fill="#67e8f9" />
+                    {/* Right mounting lug & bolt */}
+                    <rect x={cx + PR + 1} y={cy - 6.5} width={4} height={13} rx="1" fill="#213c47" />
+                    <circle cx={cx + PR + 3} cy={cy} r={1.2} fill="#67e8f9" />
+                    {/* Inset tech panel frame */}
+                    <rect
+                      x={cx - 19} y={cy - 5.5}
+                      width={38} height={11}
+                      rx="1.5"
+                      fill="#0b2430"
+                      stroke="#22d3ee"
+                      strokeWidth="0.8"
+                    />
+                    {/* Stacked indicator LED segments inside the bracket (like reference picture 2) */}
+                    {[-13.5, -4.5, 4.5, 13.5].map((offsetX, idx) => (
+                      <rect
+                        key={idx}
+                        x={cx + offsetX - 2}
+                        y={cy - 4}
+                        width={4}
+                        height={8}
+                        rx="0.8"
+                        fill="#68cbd0"
+                        opacity="0.95"
+                      />
+                    ))}
                   </g>
                 );
               }
-
-              // Elbow, T-junction, cross — render glowing blue sphere orb
-              const orbR = connCount >= 3 ? PR + 6 : PR + 4;
-              return (
-                <g key={`node-${r}-${c}`}>
-                  {/* Outer ambient glow ring */}
-                  <circle cx={cx} cy={cy} r={orbR + 8} fill="url(#nodeGlow)" />
-                  {/* Dark rim */}
-                  <circle cx={cx} cy={cy} r={orbR} fill="#062030" stroke="#22d3ee" strokeWidth="1.8" />
-                  {/* Orb body */}
-                  <circle cx={cx} cy={cy} r={orbR - 2} fill="url(#nodeOrb)" />
-                  {/* Specular highlight (small bright dot offset top-left) */}
-                  <circle cx={cx - orbR * 0.28} cy={cy - orbR * 0.28} r={orbR * 0.22}
-                    fill="rgba(255,255,255,0.55)" />
-                </g>
-              );
             })}
+          </g>
+
+          {/* ===== Pass 3: Connector node orbs at elbows, T-junctions, cross-junctions, and dead-ends ===== */}
+          <g filter="url(#nodeGlowFilter)">
+            {wallCells
+              .filter((cell) => cell.isNode)
+              .map(({ r, c, cx, cy, connCount }) => {
+                const orbR = connCount >= 3 ? PR + 6 : PR + 4;
+                return (
+                  <g key={`node-${r}-${c}`}>
+                    {/* Outer ambient glow ring */}
+                    <circle cx={cx} cy={cy} r={orbR + 8} fill="url(#nodeGlow)" />
+                    {/* Dark rim */}
+                    <circle cx={cx} cy={cy} r={orbR} fill="#062030" stroke="#22d3ee" strokeWidth="1.8" />
+                    {/* Orb body */}
+                    <circle cx={cx} cy={cy} r={orbR - 2} fill="url(#nodeOrb)" />
+                    {/* Specular highlight (small bright dot offset top-left) */}
+                    <circle
+                      cx={cx - orbR * 0.28}
+                      cy={cy - orbR * 0.28}
+                      r={orbR * 0.22}
+                      fill="rgba(255,255,255,0.6)"
+                    />
+                  </g>
+                );
+              })}
           </g>
 
           {/* ===== INTERACTIVE ITEMS on PATH cells ===== */}
@@ -332,14 +571,15 @@ const MazeGrid = () => {
                 {/* ---- ASTRONAUT ---- */}
                 {isPlayer && (
                   <g>
-                    {/* Pulsing cyan halo */}
-                    <circle cx={cx} cy={cy} r={36} fill="rgba(34,211,238,0.18)" className="animate-pulse" />
-                    <circle cx={cx} cy={cy} r={28} fill="none" stroke="#38bdf8" strokeWidth="2" strokeDasharray="5,4" className="animate-spin-slow" />
+                    {/* Clean high-visibility astronaut with soft blurred cyan aura (NO disk circle) */}
                     <image
                       href="/Images/astronaut.jpg"
-                      x={cx - 32} y={cy - 34}
-                      width={64} height={64}
-                      style={{ mixBlendMode: 'screen', filter: 'drop-shadow(0 0 12px rgba(56,189,248,1))' }}
+                      x={cx - 60} y={cy - 64}
+                      width={120} height={120}
+                      style={{
+                        mixBlendMode: 'screen',
+                        filter: 'drop-shadow(0 0 14px rgba(56,189,248,0.95)) drop-shadow(0 0 28px rgba(6,182,212,0.65))',
+                      }}
                     />
                   </g>
                 )}
@@ -347,45 +587,45 @@ const MazeGrid = () => {
                 {/* ---- DANGER TRIANGLE (Question cell in range) ---- */}
                 {isQuestion && !isPlayer && (
                   <g>
-                    <circle cx={cx} cy={cy} r={30} fill="none" stroke={dangerColor} strokeWidth="1.8" opacity="0.6" strokeDasharray="5,4" className="animate-spin-slow" />
-                    {/* Triangle pointing up */}
+                    {/* Soft blurred atmospheric glow following exact triangular contour (NO disk circle) */}
                     <polygon
-                      points={`${cx},${cy - 24} ${cx + 21},${cy + 14} ${cx - 21},${cy + 14}`}
-                      fill="#080f1a"
-                      stroke={dangerColor}
-                      strokeWidth="4"
-                      strokeLinejoin="round"
-                    />
-                    <polygon
-                      points={`${cx},${cy - 17} ${cx + 14},${cy + 10} ${cx - 14},${cy + 10}`}
+                      points={`${cx},${cy - 44} ${cx + 42},${cy + 34} ${cx - 42},${cy + 34}`}
                       fill="none"
                       stroke={dangerColor}
-                      strokeWidth="1.2"
+                      strokeWidth="16"
                       strokeLinejoin="round"
-                      opacity="0.7"
+                      opacity="0.5"
+                      style={{ filter: 'blur(8px)' }}
                     />
-                    {/* ! bar */}
-                    <rect x={cx - 3} y={cy - 10} width={6} height={13} rx="3" fill={dangerText} />
-                    {/* ! dot */}
-                    <circle cx={cx} cy={cy + 8} r={3.5} fill={dangerText} />
+                    {/* Clean High-Visibility Triangle with neon drop shadow */}
+                    <polygon
+                      points={`${cx},${cy - 44} ${cx + 42},${cy + 34} ${cx - 42},${cy + 34}`}
+                      fill="#07120c"
+                      stroke={dangerColor}
+                      strokeWidth="5"
+                      strokeLinejoin="round"
+                      style={{ filter: `drop-shadow(0 0 8px ${dangerColor})` }}
+                    />
+                    {/* Exclamation Mark Bar */}
+                    <rect x={cx - 5} y={cy - 20} width={10} height={26} rx={5} fill={dangerText} />
+                    {/* Exclamation Mark Dot */}
+                    <circle cx={cx} cy={cy + 18} r={5.5} fill={dangerText} />
                   </g>
                 )}
 
                 {/* ---- O2 CYLINDER (Goal cell) ---- */}
                 {isGoal && (
-                  <g>
-                    <circle cx={cx} cy={cy} r={38} fill="rgba(6,182,212,0.2)" className="animate-pulse" />
-                    <circle cx={cx} cy={cy} r={44} fill="none" stroke="#22d3ee" strokeWidth="2.5" strokeDasharray="7,5" className="animate-spin-slow" />
+                  <g style={{ filter: 'drop-shadow(0 0 16px rgba(6,182,212,0.9))' }}>
                     {/* Cylinder body */}
-                    <rect x={cx - 18} y={cy - 36} width={36} height={68} rx={16} fill="url(#pipeH)" stroke="#67e8f9" strokeWidth="2.5" />
+                    <rect x={cx - 20} y={cy - 40} width={40} height={78} rx={18} fill="url(#o2CylinderGrad)" stroke="#67e8f9" strokeWidth="2.5" />
                     {/* Top valve */}
-                    <rect x={cx - 8} y={cy - 42} width={16} height={8} rx="3" fill="#94a3b8" stroke="#38bdf8" strokeWidth="1" />
+                    <rect x={cx - 9} y={cy - 48} width={18} height={9} rx="3" fill="#94a3b8" stroke="#38bdf8" strokeWidth="1.2" />
                     {/* Metal bands */}
-                    <rect x={cx - 14} y={cy - 22} width={28} height={4} rx="1" fill="#0f172a" stroke="#67e8f9" strokeWidth="0.8" />
-                    <rect x={cx - 14} y={cy + 18} width={28} height={4} rx="1" fill="#0f172a" stroke="#67e8f9" strokeWidth="0.8" />
+                    <rect x={cx - 16} y={cy - 24} width={32} height={4.5} rx="1" fill="#0f172a" stroke="#67e8f9" strokeWidth="0.8" />
+                    <rect x={cx - 16} y={cy + 20} width={32} height={4.5} rx="1" fill="#0f172a" stroke="#67e8f9" strokeWidth="0.8" />
                     {/* O2 label */}
-                    <text x={cx - 10} y={cy + 12} fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#ffffff" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.9))' }}>O</text>
-                    <text x={cx + 8}  y={cy + 16} fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="15" fill="#e0f2fe">2</text>
+                    <text x={cx - 12} y={cy + 13} fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="24" fill="#ffffff">O</text>
+                    <text x={cx + 8}  y={cy + 17} fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="16" fill="#e0f2fe">2</text>
                   </g>
                 )}
               </g>
