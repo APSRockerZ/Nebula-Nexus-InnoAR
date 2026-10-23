@@ -55,8 +55,8 @@ export const RegisterForm = () => {
   return (
     <CardWrapper headerLabel="Create an account">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="register-form flex flex-col">
+          <div className="register-fields flex flex-col">
             <FormField
               control={form.control}
               name="name"
@@ -68,7 +68,7 @@ export const RegisterForm = () => {
                       {...field}
                       disabled={isPending}
                       autoComplete="off"
-                      placeholder="Arun Kumar"
+                      placeholder="Arun Singh"
                     />
                   </FormControl>
                   <FormMessage />
@@ -86,7 +86,7 @@ export const RegisterForm = () => {
                       {...field}
                       disabled={isPending}
                       autoComplete="off"
-                      placeholder="sumandalai@gmail.com"
+                      placeholder="arunsingh@gmail.com"
                       type="email"
                     />
                   </FormControl>
@@ -105,7 +105,7 @@ export const RegisterForm = () => {
                       {...field}
                       disabled={isPending}
                       autoComplete="off"
-                      placeholder="7815050372"
+                      placeholder="1234567890"
                     />
                   </FormControl>
                   <FormMessage />
@@ -123,7 +123,7 @@ export const RegisterForm = () => {
                       {...field}
                       disabled={isPending}
                       autoComplete="off"
-                      placeholder="123BT0802"
+                      placeholder="125EC0057"
                     />
                   </FormControl>
                   <FormMessage />
@@ -141,7 +141,7 @@ export const RegisterForm = () => {
                       {...field}
                       disabled={isPending}
                       autoComplete="on"
-                      placeholder="National Institute of Technology ,Rourkela"
+                      placeholder="National Institute of Technology, Rourkela"
                     />
                   </FormControl>
                   <FormMessage />
@@ -152,7 +152,7 @@ export const RegisterForm = () => {
           <FormError message={error} />
           <FormSuccess message={success} />
           <div className="w-full flex justify-center">
-            <button disabled={isPending} type="submit" className="w-[70%] text-lg bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-500 text-black font-semibold shadow-lg shadow-yellow-500/50 hover:shadow-xl hover:shadow-yellow-400/60 hover:from-amber-300 hover:to-orange-400 hover:scale-105 transition duration-300 ease-in-out px-10 py-3 rounded-xl">
+            <button disabled={isPending} type="submit" className="register-submit">
               Start Game
             </button>
           </div>
